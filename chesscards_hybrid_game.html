@@ -1,0 +1,698 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#12121f;color:#eee;user-select:none}
+.game-wrap{display:flex;flex-direction:column;min-height:580px;padding:8px;gap:8px}
+.header{background:#0a0a1a;border-bottom:1px solid #2a2a4a;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;border-radius:8px}
+.logo{font-size:16px;font-weight:700;background:linear-gradient(135deg,#CECBF6,#9FE1CB);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hbtn{background:transparent;border:1px solid #444;color:#aaa;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px}
+.hbtn:hover{background:#2a2a4a}
+.main-area{display:grid;grid-template-columns:180px 1fr 180px;gap:8px;align-items:start}
+.board-wrap{display:flex;flex-direction:column;align-items:center;gap:6px}
+.board{border:2px solid #333;border-radius:3px;overflow:hidden;display:inline-block}
+.board-row{display:flex}
+.sq{width:52px;height:52px;display:flex;align-items:center;justify-content:center;position:relative;cursor:default;transition:background 0.1s}
+.sq-light{background:#f0d9b5}
+.sq-dark{background:#b58863}
+.sq-sel{background:#7F77DD !important}
+.sq-target-empty{background:rgba(80,200,80,0.35) !important}
+.sq-target-cap{background:rgba(220,50,50,0.35) !important}
+.sq-check{background:rgba(220,50,50,0.65) !important}
+.sq .rank-lbl{position:absolute;top:2px;left:3px;font-size:8px;opacity:0.6}
+.sq .file-lbl{position:absolute;bottom:2px;right:3px;font-size:8px;opacity:0.6}
+.piece{font-size:30px;line-height:1;z-index:1;pointer-events:none}
+.piece-w{text-shadow:0 1px 3px rgba(0,0,0,0.7),0 0 1px rgba(0,0,0,0.5)}
+.piece-b{filter:drop-shadow(0 1px 2px rgba(255,255,255,0.1))}
+.dot-hint{width:14px;height:14px;border-radius:50%;background:rgba(0,0,0,0.25)}
+.cap-ring{position:absolute;inset:2px;border-radius:50%;border:3px solid rgba(220,50,50,0.8);pointer-events:none}
+
+.left-panel,.right-panel{display:flex;flex-direction:column;gap:8px}
+.panel-box{background:#1a1a3a;border-radius:10px;padding:10px;font-size:12px}
+.pile-row{display:flex;gap:10px;align-items:center;justify-content:center}
+
+.card{border-radius:7px;border:2px solid rgba(255,255,255,0.2);font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:3px;color:#fff;cursor:default;box-shadow:0 2px 6px rgba(0,0,0,0.4);position:relative;flex-shrink:0;transition:transform 0.15s,box-shadow 0.15s}
+.card-playable{transform:translateY(-8px);box-shadow:0 6px 16px rgba(255,255,255,0.15);cursor:pointer}
+.card-playable:hover{transform:translateY(-10px)}
+.card-back{background:#1a1a3a;border:2px solid #534AB7;display:flex;align-items:center;justify-content:center;font-size:16px;color:#534AB7}
+
+.hand-area{display:flex;flex-direction:column;align-items:center;gap:6px;padding:0 8px}
+.cards-row{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;max-width:660px}
+
+.phase-box{border-radius:10px;padding:10px;text-align:center;font-size:12px;border:2px solid transparent}
+.phase-card{background:#1e0a3a;border-color:#534AB7}
+.phase-chess{background:#0a1e2a;border-color:#1D9E75}
+
+.btn{border:none;border-radius:8px;padding:7px 14px;cursor:pointer;font-weight:600;font-size:12px;transition:opacity 0.15s}
+.btn:hover{opacity:0.85}
+.btn-blue{background:#185FA5;color:#fff}
+.btn-green{background:#0F6E56;color:#fff}
+.btn-red{background:#A32D2D;color:#fff}
+.btn-gray{background:#3a3a5a;color:#ccc}
+.btn-purple{background:#534AB7;color:#fff}
+.btn-sm{padding:4px 10px;font-size:11px}
+
+.effect-badge{border-radius:10px;padding:2px 8px;font-size:10px;font-weight:600;display:inline-block}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:900;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-box{background:#1e1e3a;border-radius:16px;padding:28px;max-width:380px;width:100%;text-align:center}
+.popup-toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;border-radius:12px;padding:14px 28px;font-size:20px;font-weight:700;color:#fff;pointer-events:none;animation:popAnim 0.25s ease}
+@keyframes popAnim{from{transform:translate(-50%,-50%) scale(0.6);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+.token-box{background:#1a2a3a;border-radius:8px;padding:8px 12px;text-align:center}
+.plyr-hdr{display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:20px;border:1px solid transparent;transition:all 0.3s}
+.plyr-hdr.active{border-color:var(--ac);background:rgba(255,255,255,0.06)}
+.log-box{background:#0a0a1a;border-radius:8px;padding:8px;font-size:10px;height:100px;overflow-y:auto;line-height:1.9}
+.rules-scroll{max-height:70vh;overflow-y:auto;text-align:left;font-size:13px;line-height:1.8}
+.rules-scroll h3{color:#9FE1CB;margin-top:12px;margin-bottom:4px;font-size:14px}
+.rules-scroll ul{padding-left:18px}
+.color-swatch{width:52px;height:52px;border-radius:10px;border:2px solid rgba(255,255,255,0.3);cursor:pointer;font-size:11px;font-weight:700;color:#fff;text-transform:capitalize;transition:transform 0.15s}
+.color-swatch:hover{transform:scale(1.1)}
+</style>
+
+<div class="game-wrap" id="app">Loading...</div>
+
+<script>
+const WPIECES={K:'♔',Q:'♕',R:'♖',B:'♗',N:'♘',P:'♙'};
+const BPIECES={K:'♚',Q:'♛',R:'♜',B:'♝',N:'♞',P:'♟'};
+const W='w',B='b';
+const COLORS=['red','blue','green','yellow'];
+const CHEX={red:'#D85A30',blue:'#185FA5',green:'#3B6D11',yellow:'#854F0B'};
+const CBRIGHT={red:'#E24B4A',blue:'#378ADD',green:'#639922',yellow:'#BA7517'};
+const CLIGHT={red:'#FCEBEB',blue:'#E6F1FB',green:'#EAF3DE',yellow:'#FAEEDA'};
+const RANKS=['8','7','6','5','4','3','2','1'];
+const FILES=['a','b','c','d','e','f','g','h'];
+
+function inB(r,c){return r>=0&&r<8&&c>=0&&c<8;}
+
+function initBoard(){
+  const b=Array(8).fill(null).map(()=>Array(8).fill(null));
+  const order=['R','N','B','Q','K','B','N','R'];
+  for(let c=0;c<8;c++){b[0][c]={t:order[c],col:B};b[1][c]={t:'P',col:B};b[6][c]={t:'P',col:W};b[7][c]={t:order[c],col:W};}
+  return b;
+}
+function cpB(b){return b.map(r=>r.map(c=>c?{...c}:null));}
+
+function rawMoves(board,r,c,cr,ep){
+  const p=board[r][c];if(!p)return[];
+  const{t,col}=p,en=col===W?B:W,ms=[];
+  const add=(nr,nc,ex={})=>{if(inB(nr,nc))ms.push({fr:[r,c],to:[nr,nc],...ex});};
+  if(t==='P'){
+    const d=col===W?-1:1,sr=col===W?6:1;
+    if(inB(r+d,c)&&!board[r+d][c]){add(r+d,c);if(r===sr&&!board[r+2*d][c])add(r+2*d,c,{dp:true});}
+    for(const dc of[-1,1]){
+      if(inB(r+d,c+dc)){
+        if(board[r+d][c+dc]?.col===en)add(r+d,c+dc);
+        else if(ep&&ep[0]===r+d&&ep[1]===c+dc)add(r+d,c+dc,{ep:true});
+      }
+    }
+  }else if(t==='N'){
+    for(const[dr,dc]of[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]){
+      if(inB(r+dr,c+dc)&&board[r+dr][c+dc]?.col!==col)add(r+dr,c+dc);
+    }
+  }else if(t==='K'){
+    for(const[dr,dc]of[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]){
+      if(inB(r+dr,c+dc)&&board[r+dr][c+dc]?.col!==col)add(r+dr,c+dc);
+    }
+    if(cr){
+      const row=col===W?7:0;
+      if(r===row&&c===4){
+        if(cr[col+'K']&&!board[row][5]&&!board[row][6])add(row,6,{castle:'K'});
+        if(cr[col+'Q']&&!board[row][3]&&!board[row][2]&&!board[row][1])add(row,2,{castle:'Q'});
+      }
+    }
+  }else{
+    const dirs=[];
+    if(t==='R'||t==='Q')dirs.push([0,1],[0,-1],[1,0],[-1,0]);
+    if(t==='B'||t==='Q')dirs.push([1,1],[1,-1],[-1,1],[-1,-1]);
+    for(const[dr,dc]of dirs){let nr=r+dr,nc=c+dc;while(inB(nr,nc)){if(board[nr][nc]){if(board[nr][nc].col===en)add(nr,nc);break;}add(nr,nc);nr+=dr;nc+=dc;}}
+  }
+  return ms;
+}
+
+function attacked(board,r,c,byCol){
+  for(let rr=0;rr<8;rr++)for(let cc=0;cc<8;cc++){
+    const p=board[rr][cc];
+    if(p?.col===byCol&&rawMoves(board,rr,cc,null,null).some(m=>m.to[0]===r&&m.to[1]===c))return true;
+  }return false;
+}
+
+function findKing(board,col){
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(board[r][c]?.t==='K'&&board[r][c]?.col===col)return[r,c];
+  return null;
+}
+
+function applyMove(board,mv,cr,ep){
+  const nb=cpB(board);
+  const[fr,fc]=mv.fr,[tr,tc]=mv.to;
+  const p={...nb[fr][fc]};
+  nb[tr][tc]=p;nb[fr][fc]=null;
+  let nep=null,ncr={...cr};
+  if(mv.castle==='K'){nb[tr][5]=nb[tr][7];nb[tr][7]=null;}
+  if(mv.castle==='Q'){nb[tr][3]=nb[tr][0];nb[tr][0]=null;}
+  if(mv.ep){const d=p.col===W?1:-1;nb[tr+d][tc]=null;}
+  if(mv.dp)nep=[fr+(tr>fr?1:-1),fc];
+  if(p.t==='P'&&(tr===0||tr===7))nb[tr][tc]={t:'Q',col:p.col};
+  if(p.t==='K'){ncr[p.col+'K']=false;ncr[p.col+'Q']=false;}
+  if(p.t==='R'){if(fc===7)ncr[p.col+'K']=false;if(fc===0)ncr[p.col+'Q']=false;}
+  return{board:nb,cr:ncr,ep:nep};
+}
+
+function legalMoves(board,col,cr,ep){
+  const ms=[],en=col===W?B:W;
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    if(board[r][c]?.col!==col)continue;
+    for(const m of rawMoves(board,r,c,cr,ep)){
+      const{board:nb}=applyMove(board,m,cr,ep);
+      const kp=findKing(nb,col);
+      if(!kp||attacked(nb,kp[0],kp[1],en))continue;
+      if(m.castle){
+        const[kr,kc]=findKing(board,col);
+        const mc=m.castle==='K'?5:3;
+        const nb2=cpB(board);nb2[kr][mc]=nb2[kr][kc];nb2[kr][kc]=null;
+        if(attacked(board,kr,kc,en)||attacked(nb2,kr,mc,en))continue;
+      }
+      ms.push(m);
+    }
+  }return ms;
+}
+
+function inCheck(board,col){const kp=findKing(board,col);return kp&&attacked(board,kp[0],kp[1],col===W?B:W);}
+function isCheckmate(board,col,cr,ep){return inCheck(board,col)&&legalMoves(board,col,cr,ep).length===0;}
+function isStalemate(board,col,cr,ep){return!inCheck(board,col)&&legalMoves(board,col,cr,ep).length===0;}
+
+function shuffle(a){const r=[...a];for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[r[i],r[j]]=[r[j],r[i]];}return r;}
+
+function makeDeck(){
+  const d=[];let id=0;
+  COLORS.forEach(col=>{
+    d.push({id:id++,type:'num',col,val:0});
+    for(let v=1;v<=9;v++)for(let k=0;k<2;k++)d.push({id:id++,type:'num',col,val:v});
+    for(let k=0;k<2;k++){d.push({id:id++,type:'skip',col,val:'⊘'});d.push({id:id++,type:'rev',col,val:'⟲'});d.push({id:id++,type:'p2',col,val:'+2'});}
+  });
+  for(let k=0;k<4;k++){d.push({id:id++,type:'wild',col:'wild',val:'★'});d.push({id:id++,type:'p4',col:'wild',val:'+4'});}
+  return shuffle(d);
+}
+
+function canPlay(card,top,curCol){
+  if(card.type==='wild'||card.type==='p4')return true;
+  if(card.col===curCol)return true;
+  if(card.type==='num'&&top.type==='num'&&card.val===top.val)return true;
+  if(card.type===top.type&&card.type!=='num')return true;
+  return false;
+}
+
+let G={};
+let toastTimer=null;
+
+function newGame(){
+  const deck=makeDeck();
+  const h1=deck.splice(0,7),h2=deck.splice(0,7);
+  let top=deck.splice(0,1)[0];
+  while(top.type==='p4'){deck.push(top);deck.sort(()=>Math.random()-0.5);top=deck.splice(0,1)[0];}
+  G={
+    board:initBoard(),cr:{wK:true,wQ:true,bK:true,bQ:true},ep:null,
+    phase:'card',curPlayer:'p1',chessPlayer:'p1',
+    deck,discard:[top],top,curCol:top.col,
+    h1,h2,
+    movesLeft:{p1:0,p2:0},blocked:{p1:0,p2:0},
+    skipped:{p1:false,p2:false},
+    selCard:null,selPiece:null,legals:[],
+    status:'playing',winner:null,
+    drawPending:0,
+    colorPick:null,
+    plusPick:null,
+    chain:{p1:{col:null,cnt:0},p2:{col:null,cnt:0}},
+    log:[],round:1,
+    showRules:false,
+    toast:null,
+  };
+  render();
+}
+
+function addLog(msg,type='info'){
+  G.log.push({msg,type,id:Date.now()+Math.random()});
+  if(G.log.length>25)G.log=G.log.slice(-25);
+}
+
+function showToast(txt,color){
+  G.toast={txt,color};render();
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>{G.toast=null;render();},1700);
+}
+
+function cardEnergy(card){
+  if(card.type!=='num')return 1;
+  return Math.max(1,Math.floor(card.val/3)+1);
+}
+
+function finishCardTurn(player){
+  const opp=player==='p1'?'p2':'p1';
+  if(G.movesLeft[player]>0){
+    G.phase='chess';G.chessPlayer=player;G.curPlayer=player;G.selPiece=null;G.legals=[];
+  } else {
+    G.phase='card';G.curPlayer=opp;
+  }
+}
+
+function playCard(cardId){
+  const player=G.curPlayer;
+  if(G.phase!=='card'||G.colorPick||G.plusPick)return;
+  const hand=player==='p1'?G.h1:G.h2;
+  const idx=hand.findIndex(c=>c.id===cardId);
+  if(idx<0)return;
+  const card=hand[idx];
+  if(!canPlay(card,G.top,G.curCol))return;
+  hand.splice(idx,1);
+  G.discard.push(card);G.top=card;
+  addLog(`${player==='p1'?'P1':'P2'} played ${card.val} (${card.col})`,'card');
+
+  // chain combo
+  const ch=G.chain[player];
+  if(card.col!=='wild'){
+    if(ch.col===card.col){ch.cnt++;if(ch.cnt>=3){G.movesLeft[player]=Math.min(G.movesLeft[player]+1,6);ch.col=null;ch.cnt=0;showToast('🔥 Color Chain! +1 Move','#639922');}}
+    else{ch.col=card.col;ch.cnt=1;}
+  }
+
+  // number match
+  if(card.type==='num'&&G.top.type==='num'&&G.discard.length>1&&G.discard[G.discard.length-2]?.type==='num'&&G.discard[G.discard.length-2]?.val===card.val){
+    G.movesLeft[player]=Math.min(G.movesLeft[player]+1,6);showToast('🎯 Number Match! +1','#BA7517');
+  }
+
+  const opp=player==='p1'?'p2':'p1';
+
+  if(card.type==='wild'){
+    G.curCol=card.col;G.colorPick=player;render();return;
+  }
+  if(card.type==='p4'){
+    G.curCol=card.col;G.colorPick=player;G.plusPick={type:'p4',player};render();return;
+  }
+  if(card.type==='p2'){
+    if(G.drawPending>0){G.drawPending+=2;showToast('⚡ +2 Stacked!','#E24B4A');G.curCol=card.col;finishCardTurn(player);render();return;}
+    G.drawPending=2;G.plusPick={type:'p2',player};G.curCol=card.col;render();return;
+  }
+  if(card.type==='skip'){
+    G.skipped[opp]=true;G.curCol=card.col;showToast('⏭️ Chess Skipped!','#BA7517');finishCardTurn(player);render();return;
+  }
+  if(card.type==='rev'){
+    G.movesLeft[player]=Math.min(G.movesLeft[player]+1,6);G.curCol=card.col;showToast('↩️ Reverse: +1 Move!','#7F77DD');finishCardTurn(player);render();return;
+  }
+  // number
+  const en=cardEnergy(card);
+  G.movesLeft[player]=Math.min(G.movesLeft[player]+en,6);
+  G.curCol=card.col;
+  if(hand.length===0){G.movesLeft[player]=Math.min(G.movesLeft[player]+2,6);showToast('🎉 Last Card! +2 Moves!','#FAC775');}
+  finishCardTurn(player);render();
+}
+
+function pickColor(col){
+  G.curCol=col;G.colorPick=null;
+  const player=G.plusPick?G.plusPick.player:G.curPlayer;
+  if(!G.plusPick){
+    G.movesLeft[player]=Math.min(G.movesLeft[player]+1,6);
+    finishCardTurn(player);
+  }
+  render();
+}
+
+function resolvePlus(choice){
+  const{type,player}=G.plusPick;
+  const amt=type==='p4'?4:2;
+  const opp=player==='p1'?'p2':'p1';
+  G.plusPick=null;
+  if(choice==='moves'){G.movesLeft[player]=Math.min(G.movesLeft[player]+amt,6);showToast(`+${amt} Chess Moves!`,'#639922');}
+  else{G.blocked[opp]+=amt;showToast(`-${amt} for ${opp==='p1'?'P1':'P2'}!`,'#E24B4A');}
+  G.drawPending=0;
+  if(G.colorPick){render();return;}
+  finishCardTurn(player);render();
+}
+
+function drawCard(){
+  if(G.phase!=='card'||G.colorPick||G.plusPick)return;
+  const player=G.curPlayer;
+  const opp=player==='p1'?'p2':'p1';
+  if(G.drawPending>0){
+    const hand=player==='p1'?G.h1:G.h2;
+    for(let i=0;i<G.drawPending;i++){
+      if(!G.deck.length){const fresh=shuffle(G.discard.slice(0,-1));G.deck=fresh;G.discard=[G.top];}
+      hand.push(G.deck.pop());
+    }
+    addLog(`${player==='p1'?'P1':'P2'} drew ${G.drawPending}`,'draw');
+    G.drawPending=0;
+    G.phase='card';G.curPlayer=opp;render();return;
+  }
+  if(!G.deck.length){const fresh=shuffle(G.discard.slice(0,-1));G.deck=fresh;G.discard=[G.top];}
+  const drawn=G.deck.pop();
+  const hand=player==='p1'?G.h1:G.h2;
+  hand.push(drawn);
+  addLog(`${player==='p1'?'P1':'P2'} drew a card`,'draw');
+  G.phase='card';G.curPlayer=opp;render();
+}
+
+function clickSquare(r,c){
+  if(G.phase!=='chess'||G.status!=='playing')return;
+  const player=G.chessPlayer;
+  const pCol=player==='p1'?W:B;
+  const piece=G.board[r][c];
+
+  if(G.selPiece){
+    const mv=G.legals.find(m=>m.to[0]===r&&m.to[1]===c);
+    if(mv){doMove(mv);return;}
+    if(piece?.col===pCol){
+      G.selPiece=[r,c];
+      G.legals=legalMoves(G.board,pCol,G.cr,G.ep).filter(m=>m.fr[0]===r&&m.fr[1]===c);
+      render();return;
+    }
+    G.selPiece=null;G.legals=[];render();return;
+  }
+  if(piece?.col===pCol){
+    G.selPiece=[r,c];
+    G.legals=legalMoves(G.board,pCol,G.cr,G.ep).filter(m=>m.fr[0]===r&&m.fr[1]===c);
+    render();
+  }
+}
+
+function doMove(mv){
+  const player=G.chessPlayer;
+  const opp=player==='p1'?'p2':'p1';
+  const{board:nb,cr:ncr,ep:nep}=applyMove(G.board,mv,G.cr,G.ep);
+  const opCol=opp==='p1'?W:B;
+  const movingPiece=G.board[mv.fr[0]][mv.fr[1]];
+  addLog(`${player==='p1'?'P1':'P2'} ${movingPiece?.t} → ${FILES[mv.to[1]]}${RANKS[mv.to[0]]}`,'chess');
+
+  G.board=nb;G.cr=ncr;G.ep=nep;G.selPiece=null;G.legals=[];
+  let ml=G.movesLeft[player]-1;
+  if(G.blocked[player]>0){G.blocked[player]--;ml=Math.max(0,ml-1);}
+  G.movesLeft[player]=ml;
+
+  if(isCheckmate(nb,opCol,ncr,nep)){G.status='checkmate';G.winner=player;showToast('♚ CHECKMATE!','#A32D2D');render();return;}
+  if(isStalemate(nb,opCol,ncr,nep)){G.status='stalemate';showToast('🤝 STALEMATE','#534AB7');render();return;}
+  if(inCheck(nb,opCol))showToast('⚠️ CHECK!','#E24B4A');
+
+  if(ml<=0){
+    const sk=G.skipped[opp];
+    G.skipped[opp]=false;
+    if(sk){G.phase='card';G.curPlayer=player;showToast('⏭️ Skipped!','#BA7517');}
+    else{G.phase='card';G.curPlayer=opp;G.chessPlayer=opp;G.round++;}
+  }
+  render();
+}
+
+function endChessTurn(){
+  if(G.phase!=='chess')return;
+  const player=G.chessPlayer,opp=player==='p1'?'p2':'p1';
+  const sk=G.skipped[opp];G.skipped[opp]=false;
+  G.selPiece=null;G.legals=[];G.movesLeft[player]=0;
+  if(sk){G.phase='card';G.curPlayer=player;showToast('⏭️ Opp Skipped!','#BA7517');}
+  else{G.phase='card';G.curPlayer=opp;G.chessPlayer=opp;G.round++;}
+  render();
+}
+
+function cardFaceHTML(card,size='md',curCol,playable=false){
+  const w=size==='lg'?56:size==='sm'?34:46;
+  const h=size==='lg'?80:size==='sm'?50:66;
+  const isWild=card.col==='wild';
+  const dispCol=isWild?(curCol||'wild'):card.col;
+  const bg=isWild?`linear-gradient(135deg,${CBRIGHT.red},${CBRIGHT.blue},${CBRIGHT.green},${CBRIGHT.yellow})`:CBRIGHT[dispCol]||'#555';
+  const fs=size==='lg'?19:size==='sm'?12:15;
+  const lbl=String(card.val);
+  const cls=`card${playable?' card-playable':''}`;
+  return `<div class="${cls}" style="width:${w}px;height:${h}px;background:${bg};font-size:${fs}px;outline:${playable?`2px solid ${CBRIGHT[dispCol]||'#fff'}`:'none'};outline-offset:2px;border-radius:7px">
+    <span style="font-size:${fs*0.6}px;align-self:flex-start;opacity:0.85">${lbl}</span>
+    <span>${lbl}</span>
+    <span style="font-size:${fs*0.6}px;align-self:flex-end;opacity:0.85;transform:rotate(180deg)">${lbl}</span>
+  </div>`;
+}
+
+function playerHeaderHTML(player){
+  const isActive=(G.phase==='card'&&G.curPlayer===player)||(G.phase==='chess'&&G.chessPlayer===player);
+  const hand=player==='p1'?G.h1:G.h2;
+  const pInCheck=inCheck(G.board,player==='p1'?W:B);
+  const ac=player==='p1'?'#9FE1CB':'#CECBF6';
+  const bg=player==='p1'?'#1D9E75':'#534AB7';
+  return `<div class="plyr-hdr${isActive?' active':''}" style="--ac:${ac}">
+    <div style="width:26px;height:26px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">${player==='p1'?'P1':'P2'}</div>
+    <span style="font-size:13px;font-weight:600;color:${isActive?ac:'#888'}">${player==='p1'?'Player 1':'Player 2'}</span>
+    <span style="font-size:11px;color:#666">${hand.length} cards</span>
+    ${pInCheck?`<span style="font-size:10px;background:#A32D2D;color:#F7C1C1;padding:2px 6px;border-radius:10px;font-weight:700">CHECK</span>`:''}
+    ${isActive?`<span style="font-size:10px;background:${player==='p1'?'#085041':'#26215C'};color:${ac};padding:2px 6px;border-radius:10px">${G.phase==='card'?'card turn':'moving'}</span>`:''}
+  </div>`;
+}
+
+function boardHTML(){
+  const legSet=new Set((G.legals||[]).map(m=>`${m.to[0]},${m.to[1]}`));
+  let h=`<div class="board">`;
+  for(let r=0;r<8;r++){
+    h+=`<div class="board-row">`;
+    for(let c=0;c<8;c++){
+      const isLight=(r+c)%2===0;
+      const isSel=G.selPiece&&G.selPiece[0]===r&&G.selPiece[1]===c;
+      const isTarget=legSet.has(`${r},${c}`);
+      const p=G.board[r][c];
+      const pInChk=p?.t==='K'&&inCheck(G.board,p.col);
+      let sqClass=`sq ${isLight?'sq-light':'sq-dark'}`;
+      if(isSel)sqClass+=' sq-sel';
+      else if(isTarget&&!p)sqClass+=' sq-target-empty';
+      else if(isTarget&&p)sqClass+=' sq-target-cap';
+      if(pInChk)sqClass+=' sq-check';
+      const pCol=G.chessPlayer==='p1'?W:B;
+      const clickable=G.phase==='chess'&&(p?.col===pCol||isTarget);
+      const sym=p?(p.col===W?WPIECES[p.t]:BPIECES[p.t]):'';
+      h+=`<div class="${sqClass}" onclick="clickSquare(${r},${c})" style="cursor:${G.phase==='chess'?(clickable?'pointer':'default'):'default'}">`;
+      if(c===0)h+=`<span class="rank-lbl" style="color:${isLight?'#b58863':'#f0d9b5'}">${RANKS[r]}</span>`;
+      if(r===7)h+=`<span class="file-lbl" style="color:${isLight?'#b58863':'#f0d9b5'}">${FILES[c]}</span>`;
+      if(isTarget&&!p)h+=`<div class="dot-hint"></div>`;
+      if(sym)h+=`<span class="piece piece-${p.col}">${sym}</span>`;
+      if(isTarget&&p)h+=`<div class="cap-ring"></div>`;
+      h+=`</div>`;
+    }
+    h+=`</div>`;
+  }
+  h+=`</div>`;
+  return h;
+}
+
+function effectsHTML(){
+  const ef=[];
+  if(G.drawPending>0)ef.push(`<span class="effect-badge" style="background:#A32D2D33;border:1px solid #E24B4A;color:#E24B4A">Draw +${G.drawPending}</span>`);
+  if(G.skipped.p1)ef.push(`<span class="effect-badge" style="background:#854F0B33;border:1px solid #BA7517;color:#BA7517">P1 Chess Skip</span>`);
+  if(G.skipped.p2)ef.push(`<span class="effect-badge" style="background:#854F0B33;border:1px solid #BA7517;color:#BA7517">P2 Chess Skip</span>`);
+  if(G.blocked.p1>0)ef.push(`<span class="effect-badge" style="background:#A32D2D33;border:1px solid #E24B4A;color:#E24B4A">P1 -${G.blocked.p1} Moves</span>`);
+  if(G.blocked.p2>0)ef.push(`<span class="effect-badge" style="background:#A32D2D33;border:1px solid #E24B4A;color:#E24B4A">P2 -${G.blocked.p2} Moves</span>`);
+  if(G.phase==='chess'){
+    const cp=G.chessPlayer;
+    ef.push(`<span class="effect-badge" style="background:#0F6E5633;border:1px solid #1D9E75;color:#9FE1CB">${cp==='p1'?'P1':'P2'}: ${G.movesLeft[cp]} move(s)</span>`);
+  }
+  if(inCheck(G.board,W))ef.push(`<span class="effect-badge" style="background:#A32D2D55;border:1px solid #E24B4A;color:#F7C1C1">P1 IN CHECK ⚠️</span>`);
+  if(inCheck(G.board,B))ef.push(`<span class="effect-badge" style="background:#A32D2D55;border:1px solid #E24B4A;color:#F7C1C1">P2 IN CHECK ⚠️</span>`);
+  return ef.length?ef.join(' '):`<span style="color:#555;font-size:11px">No active effects</span>`;
+}
+
+function logHTML(){
+  return G.log.slice(-14).map(l=>{
+    const col=l.type==='chess'?'#9FE1CB':l.type==='card'?'#CECBF6':l.type==='draw'?'#aaa':'#666';
+    return `<div style="color:${col}">${l.msg}</div>`;
+  }).join('');
+}
+
+function render(){
+  const app=document.getElementById('app');
+  const p1Check=inCheck(G.board,W),p2Check=inCheck(G.board,B);
+  const pHand=G.curPlayer==='p1'?G.h1:G.h2;
+  const playable=G.phase==='card'&&!G.colorPick&&!G.plusPick?pHand.filter(c=>canPlay(c,G.top,G.curCol)):[];
+  const playableIds=new Set(playable.map(c=>c.id));
+
+  const p2Cards=G.h2.map(()=>`<div class="card card-back" style="width:38px;height:54px">🂠</div>`).join('');
+  const p1Cards=G.h1.map(c=>{
+    const isPlay=G.curPlayer==='p1'&&playableIds.has(c.id);
+    return `<div onclick="if(${G.curPlayer==='p1'?1:0})playCard(${c.id})">${cardFaceHTML(c,'md',G.curCol,isPlay)}</div>`;
+  }).join('');
+  const p2CardsPlay=G.h2.map(c=>{
+    const isPlay=G.curPlayer==='p2'&&playableIds.has(c.id);
+    return `<div onclick="if(${G.curPlayer==='p2'?1:0})playCard(${c.id})">${cardFaceHTML(c,'md',G.curCol,isPlay)}</div>`;
+  }).join('');
+
+  const topDisp=G.top?cardFaceHTML(G.top,'lg',G.curCol):'';
+  const phaseClass=G.phase==='card'?'phase-card':'phase-chess';
+  const phaseColor=G.phase==='card'?'#CECBF6':'#9FE1CB';
+
+  // Modals
+  let modalHTML='';
+  if(G.status==='checkmate'||G.status==='stalemate'){
+    const winTxt=G.status==='checkmate'?(G.winner==='p1'?'Player 1 Wins!':'Player 2 Wins!'):'Stalemate!';
+    modalHTML=`<div class="modal-overlay"><div class="modal-box">
+      <div style="font-size:48px;margin-bottom:8px">${G.status==='checkmate'?'♔':'🤝'}</div>
+      <div style="font-size:22px;font-weight:700;color:#C0DD97;margin-bottom:8px">${winTxt}</div>
+      <div style="font-size:13px;color:#888;margin-bottom:20px">${G.status==='checkmate'?'The king has no escape!':'No legal moves — draw.'}</div>
+      <button class="btn btn-blue" onclick="newGame()">Play Again</button>
+    </div></div>`;
+  }
+  if(G.colorPick&&!G.plusPick){
+    const colorBtns=COLORS.map(col=>`<button class="color-swatch" style="background:${CBRIGHT[col]}" onclick="pickColor('${col}')">${col}</button>`).join('');
+    modalHTML=`<div class="modal-overlay"><div class="modal-box">
+      <div style="font-size:17px;font-weight:700;color:#CECBF6;margin-bottom:14px">Choose a color</div>
+      <div style="display:flex;gap:10px;justify-content:center">${colorBtns}</div>
+    </div></div>`;
+  }
+  if(G.plusPick){
+    const amt=G.plusPick.type==='p4'?4:2;
+    const colorBtns=G.colorPick?`<div style="margin-top:14px"><div style="font-size:12px;color:#aaa;margin-bottom:8px">Pick a color:</div><div style="display:flex;gap:8px;justify-content:center">${COLORS.map(col=>`<button onclick="pickColor('${col}');resolvePlus(document.getElementById('pChoice').value||'moves')" style="width:42px;height:42px;border-radius:8px;background:${CBRIGHT[col]};border:2px solid rgba(255,255,255,0.3);cursor:pointer;font-size:10px;font-weight:700;color:#fff">${col[0].toUpperCase()}</button>`).join('')}</div></div>`:'';
+    modalHTML=`<div class="modal-overlay"><div class="modal-box">
+      <div style="font-size:18px;font-weight:700;color:#F7C1C1;margin-bottom:6px">${G.plusPick.type==='p4'?'+4':'+2'} Power!</div>
+      <div style="font-size:13px;color:#aaa;margin-bottom:18px">${G.plusPick.player==='p1'?'Player 1':'Player 2'} — choose your bonus:</div>
+      <div style="display:flex;gap:10px;justify-content:center">
+        <button class="btn btn-green" onclick="resolvePlus('moves')">+${amt} Chess Moves</button>
+        <button class="btn btn-red" onclick="resolvePlus('block')">-${amt} Opp Moves</button>
+      </div>
+      ${colorBtns}
+    </div></div>`;
+  }
+  if(G.showRules){
+    modalHTML=`<div class="modal-overlay" onclick="if(event.target===this){G.showRules=false;render()}"><div class="modal-box" style="max-width:500px;text-align:left;max-height:85vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span style="font-size:18px;font-weight:700;color:#CECBF6">📖 Rules</span>
+        <button class="btn btn-gray btn-sm" onclick="G.showRules=false;render()">✕ Close</button>
+      </div>
+      <div class="rules-scroll">
+        <h3>🎯 Goal</h3><p>Checkmate your opponent's King using card-powered chess moves.</p>
+        <h3>🃏 Card Phase</h3><ul>
+          <li>Play a card matching current color or type</li>
+          <li>Number cards earn ⌊value÷3⌋+1 chess moves</li>
+          <li>Can't play? Draw a card and pass turn</li>
+          <li>Playing all cards earns +2 bonus moves</li>
+        </ul>
+        <h3>♟️ Chess Phase</h3><ul>
+          <li>Move pieces using standard chess rules</li>
+          <li>Use all your earned moves or click "End Chess Turn"</li>
+          <li>Max 6 moves per chess phase</li>
+          <li>Must respond to check if in check</li>
+        </ul>
+        <h3>✨ Special Cards</h3><ul>
+          <li><b>+2:</b> Choose +2 moves OR block opponent −2</li>
+          <li><b>+4 Wild:</b> Choose +4 moves OR block −4 + pick color</li>
+          <li><b>Skip (⊘):</b> Skip opponent's next chess turn only</li>
+          <li><b>Reverse (⟲):</b> +1 chess move</li>
+          <li><b>Wild (★):</b> Pick any color + 1 chess move</li>
+        </ul>
+        <h3>💥 Combos</h3><ul>
+          <li><b>Color Chain:</b> 3 same-color cards in a row = +1 move</li>
+          <li><b>Number Match:</b> Same number as top card = +1 move</li>
+          <li><b>+2 Stack:</b> Counter +2 with another +2</li>
+          <li><b>Last Card:</b> Empty your hand = +2 bonus moves</li>
+        </ul>
+        <h3>⚖️ Balance Rules</h3><ul>
+          <li>Max 6 chess moves per turn</li>
+          <li>Card effects cannot override chess legality</li>
+          <li>Skip and block effects don't stack infinitely</li>
+        </ul>
+      </div>
+    </div></div>`;
+  }
+
+  const toastHTML=G.toast?`<div class="popup-toast" style="background:${G.toast.color}">${G.toast.txt}</div>`:'';
+
+  app.innerHTML=`
+  ${toastHTML}${modalHTML}
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:20px">♟️🃏</span>
+      <span class="logo">ChessCards</span>
+      <span style="font-size:11px;color:#555">Round ${G.round}</span>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="hbtn" onclick="G.showRules=true;render()">Rules</button>
+      <button class="hbtn" onclick="newGame()">New Game</button>
+    </div>
+  </div>
+
+  <div style="padding:6px 8px;display:flex;flex-direction:column;align-items:center;gap:6px">
+    ${playerHeaderHTML('p2')}
+    <div style="display:flex;gap:5px;justify-content:center;flex-wrap:wrap">${G.curPlayer==='p2'&&G.phase==='card'?p2CardsPlay:p2Cards}</div>
+  </div>
+
+  <div class="main-area" style="padding:0 8px">
+    <div class="left-panel">
+      <div class="panel-box">
+        <div style="font-size:10px;color:#666;margin-bottom:6px;font-weight:600">CARD PILES</div>
+        <div class="pile-row">
+          <div style="text-align:center">
+            <div style="font-size:10px;color:#666;margin-bottom:3px">Discard</div>
+            ${topDisp}
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:10px;color:#666;margin-bottom:3px">Draw (${G.deck.length})</div>
+            <div onclick="drawCard()" style="width:56px;height:80px;border-radius:8px;background:linear-gradient(135deg,#2a2a5a,#3a1a4a);border:2px solid #534AB7;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px">🂠</div>
+          </div>
+          ${G.curCol?`<div style="text-align:center"><div style="font-size:10px;color:#666;margin-bottom:3px">Color</div><div style="width:36px;height:36px;border-radius:50%;background:${CBRIGHT[G.curCol]||'#666'};border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff">${(G.curCol||'?')[0].toUpperCase()}</div></div>`:''}
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <div style="font-size:10px;color:#666;margin-bottom:5px;font-weight:600">EFFECTS</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">${effectsHTML()}</div>
+      </div>
+
+      <div class="panel-box">
+        <div style="font-size:10px;color:#666;margin-bottom:4px;font-weight:600">CHESS TOKENS</div>
+        <div style="display:flex;gap:8px">
+          <div class="token-box"><div style="color:#9FE1CB;font-weight:700;font-size:16px">${G.movesLeft.p1}</div><div style="color:#555;font-size:10px">P1</div></div>
+          <div class="token-box"><div style="color:#CECBF6;font-weight:700;font-size:16px">${G.movesLeft.p2}</div><div style="color:#555;font-size:10px">P2</div></div>
+        </div>
+      </div>
+
+      <div class="log-box" id="logbox">${logHTML()}</div>
+    </div>
+
+    <div class="board-wrap">
+      ${boardHTML()}
+      <div class="phase-box ${phaseClass}">
+        <div style="font-size:12px;font-weight:700;color:${phaseColor}">${G.phase==='card'?'🃏 CARD PHASE':'♟️ CHESS PHASE'}</div>
+        <div style="font-size:11px;color:#888;margin-top:2px">
+          ${G.phase==='card'?`${G.curPlayer==='p1'?'P1':'P2'} plays a card`:`${G.chessPlayer==='p1'?'P1':'P2'} — ${G.movesLeft[G.chessPlayer]} move(s) left`}
+        </div>
+        ${G.phase==='chess'?`<button class="btn btn-green btn-sm" style="margin-top:6px" onclick="endChessTurn()">End Chess Turn</button>`:''}
+        ${G.phase==='card'&&G.drawPending>0?`<div style="font-size:11px;color:#E24B4A;margin-top:4px">Must draw +${G.drawPending} or stack!</div>`:''}
+      </div>
+    </div>
+
+    <div class="right-panel" style="font-size:12px">
+      <div class="panel-box">
+        <div style="font-size:10px;color:#666;margin-bottom:6px;font-weight:600">HOW TO PLAY</div>
+        <div style="color:#888;line-height:1.7;font-size:11px">
+          ${G.phase==='card'?`
+            <b style="color:${G.curPlayer==='p1'?'#9FE1CB':'#CECBF6'}">${G.curPlayer==='p1'?'P1':'P2'}'s turn</b><br>
+            Click a <span style="color:#CECBF6">highlighted card</span> to play it.<br>
+            Or click the <span style="color:#7F77DD">Draw pile</span> to draw.
+            ${G.drawPending>0?`<br><b style="color:#E24B4A">Forced draw: +${G.drawPending}!</b><br>Stack a +2 to pass it on.`:''}
+          `:`
+            <b style="color:#9FE1CB">Chess Phase</b><br>
+            Click a piece to select it.<br>
+            <span style="color:#639922">Green dots</span> = legal moves.<br>
+            <span style="color:#E24B4A">Red rings</span> = captures.<br>
+            ${G.movesLeft[G.chessPlayer]} move(s) remaining.
+          `}
+        </div>
+      </div>
+      <div class="panel-box">
+        <div style="font-size:10px;color:#666;margin-bottom:6px;font-weight:600">CAPTURED POTENTIAL</div>
+        <div style="font-size:11px;color:#555">
+          ${G.h1.length}♟ cards in P1 hand<br>
+          ${G.h2.length}♟ cards in P2 hand<br>
+          Chain: P1 ${G.chain.p1.cnt}/3 • P2 ${G.chain.p2.cnt}/3
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hand-area">
+    ${playerHeaderHTML('p1')}
+    <div class="cards-row">
+      ${p1Cards}
+      ${G.phase==='card'&&G.curPlayer==='p1'?`<button class="btn btn-gray btn-sm" style="align-self:flex-end" onclick="drawCard()">Draw ${G.drawPending>0?'(+'+G.drawPending+')':''}</button>`:''}
+    </div>
+  </div>
+  `;
+
+  const lb=document.getElementById('logbox');
+  if(lb)lb.scrollTop=lb.scrollHeight;
+}
+
+newGame();
+</script>
